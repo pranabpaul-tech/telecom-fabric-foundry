@@ -1,0 +1,14 @@
+// Drops per tower and region in 5-minute bins. Both agents and the Operations Agent query this
+// view instead of scanning cdr_raw. Bins are aligned to the clock (UTC) and use call_start_time.
+// `backfill = true` is valid only the first time the view is created; the schema applier removes
+// the option when the view already exists.
+.create-or-alter materialized-view with (backfill = true) mv_drops_5m on table cdr_raw
+{
+    cdr_raw
+    | summarize calls = count(),
+                completed = countif(status == "Completed"),
+                failed = countif(status == "Failed"),
+                dropped = countif(status == "Dropped"),
+                quality_sum = sum(call_quality)
+      by bin_start = bin(call_start_time, 5m), region, tower_id
+}

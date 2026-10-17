@@ -10,3 +10,6 @@ state.json.bak
 .pytest_cache/
 .secrets/
 *.zip
+
+# Jumpstart authors' notebook backup (not ours to redistribute)
+artifacts/emulator/original/

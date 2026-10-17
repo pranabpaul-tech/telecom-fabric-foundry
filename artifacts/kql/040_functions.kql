@@ -1,0 +1,67 @@
+// Functions that implement KPI-DEF-001. The Operations Agent, the Fabric Data Agent examples and the
+// orchestrator's KQL tools all call these, so a rate means the same thing everywhere.
+//
+// Window semantics: a window is `window` long and ends at the most recent COMPLETE 5-minute bin
+// (bin(asof, 5m)). With window = 5m that is the previous full 5-minute bin, so a window always holds
+// a full 5 minutes of calls. `asof` defaults to now(); pass a time to replay history.
+
+.create-or-alter function with (docstring = "Drop rate per region over the latest complete window. DCR = dropped / all attempts.", folder = "telco")
+drop_rate_by_region(window: timespan = 5m, asof: datetime = datetime(null))
+{
+    let end_bin = bin(coalesce(asof, now()), 5m);
+    mv_drops_5m
+    | where bin_start >= end_bin - window and bin_start < end_bin
+    | where isnotempty(region)
+    | summarize calls = sum(calls), completed = sum(completed), failed = sum(failed), dropped = sum(dropped),
+                towers = dcount(tower_id)
+      by region
+    | extend drop_pct = round(100.0 * todouble(dropped) / calls, 2),
+             setup_fail_pct = round(100.0 * todouble(failed) / calls, 2),
+             window_start = end_bin - window, window_end = end_bin
+    | order by drop_pct desc
+}
+
+.create-or-alter function with (docstring = "Worst towers by drop rate in one region. Towers with fewer than min_calls calls are left out (insufficient sample).", folder = "telco")
+worst_towers(region_name: string, window: timespan = 1h, n: long = 5, min_calls: long = 10, asof: datetime = datetime(null))
+{
+    let end_bin = bin(coalesce(asof, now()), 5m);
+    mv_drops_5m
+    | where bin_start >= end_bin - window and bin_start < end_bin
+    | where region == region_name
+    | summarize calls = sum(calls), dropped = sum(dropped), failed = sum(failed) by tower_id
+    | where calls >= min_calls
+    | extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)
+    | lookup (towers | project tower_id, site_name, vendor, technology, backhaul, backup_power, backup_hours, enterprise_customers) on tower_id
+    | top n by drop_pct desc
+}
+
+.create-or-alter function with (docstring = "THE Operations Agent rule: regions whose drop rate exceeds threshold in the latest complete window with at least min_calls calls. towers_affected counts towers above the threshold that have at least 10 calls.", folder = "telco")
+region_alert_candidates(window: timespan = 5m, min_calls: long = 50, threshold: real = 0.15, asof: datetime = datetime(null))
+{
+    let end_bin = bin(coalesce(asof, now()), 5m);
+    mv_drops_5m
+    | where bin_start >= end_bin - window and bin_start < end_bin
+    | where isnotempty(region)
+    | summarize calls = sum(calls), dropped = sum(dropped) by region, tower_id
+    | summarize calls = sum(calls), dropped = sum(dropped),
+                towers_affected = countif(calls >= 10 and todouble(dropped) / calls > threshold)
+      by region
+    | extend drop_rate = todouble(dropped) / calls
+    | where calls >= min_calls and drop_rate > threshold
+    | project region, drop_pct = round(100.0 * drop_rate, 2), calls, dropped, towers_affected,
+              window_start = end_bin - window, window_end = end_bin
+    | order by drop_pct desc
+}
+
+.create-or-alter function with (docstring = "Towers that normally carry traffic but had no calls in the latest complete windows (silent towers, KPI-DEF-001 3.5).", folder = "telco")
+silent_towers(window: timespan = 10m, asof: datetime = datetime(null))
+{
+    let end_bin = bin(coalesce(asof, now()), 5m);
+    let active = mv_drops_5m
+        | where bin_start >= end_bin - window and bin_start < end_bin
+        | summarize recent_calls = sum(calls) by tower_id;
+    towers
+    | lookup active on tower_id
+    | where isnull(recent_calls) or recent_calls == 0
+    | project tower_id, site_name, region, vendor, technology, backup_power, backup_hours, field_team, enterprise_customers
+}

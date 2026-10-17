@@ -1,0 +1,4 @@
+// towers: static tower dimension. The rows are loaded from artifacts/seed/towers.csv by
+// src/telcoops/setup/03_kql_schema.py (.set-or-replace), so tower_id here always matches the
+// emulator, the knowledge documents and SITE-INV-001.
+.create-merge table towers (tower_id:string, site_name:string, region:string, city:string, lat:real, lon:real, vendor:string, technology:string, backhaul:string, backup_power:string, backup_hours:int, field_team:string, traffic_weight:real, enterprise_customers:string)
