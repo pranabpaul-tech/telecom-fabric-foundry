@@ -1,0 +1,12 @@
+.venv/
+.venv-js/
+__pycache__/
+*.pyc
+.env
+state.json
+state.json.bak
+*.tmp
+.azure/
+.pytest_cache/
+.secrets/
+*.zip
