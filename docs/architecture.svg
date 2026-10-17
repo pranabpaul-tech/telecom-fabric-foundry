@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="900" viewBox="0 0 1240 900" role="img" aria-label="Planned architecture of the telecom NOC copilot. Scripts on the local machine deploy Azure with Bicep and build Fabric items over REST. In Fabric, an emulator notebook streams call data records through an Eventstream into an Eventhouse. An Operations Agent checks drop rates every five minutes and sends alerts through Activator and Power Automate as Outlook email. A Fabric Data Agent answers questions over KQL. In Azure, a VNet-injected Foundry project hosts an orchestrator agent, published to Teams through Bot Service, which calls the Fabric Data Agent with the user's token, runs read-only KQL, and asks a Telecom Knowledge agent grounded on a Foundry IQ knowledge base over Blob documents.">
+  <title>Telecom Fabric Foundry: planned architecture</title>
+  <desc>Planned architecture of the telecom NOC copilot. Scripts on the local machine deploy Azure with Bicep and build Fabric items over REST. In Fabric, an emulator notebook streams call data records through an Eventstream into an Eventhouse. An Operations Agent checks drop rates every five minutes and sends alerts through Activator and Power Automate as Outlook email. A Fabric Data Agent answers questions over KQL. In Azure, a VNet-injected Foundry project hosts an orchestrator agent, published to Teams through Bot Service, which calls the Fabric Data Agent with the user's token, runs read-only KQL, and asks a Telecom Knowledge agent grounded on a Foundry IQ knowledge base over Blob documents.</desc>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0 L10 5 L0 10 z"/></marker>
+  </defs>
+  <style>
+    svg {
+      --bg: #f3f5f8; --surface: #ffffff; --ink: #16212c; --muted: #56667a; --line: #c6d1dc;
+      --fabric: #0b8574;  --fabric-bg: #e2f3ef;
+      --azure: #2466cf;   --azure-bg: #e5edfa;
+      --foundry: #6642c4; --foundry-bg: #ece7f9;
+      --local: #9c5a00;   --local-bg: #faf0dd;
+      --m365: #a3366b;    --m365-bg: #f8e6ef;
+      --font: system-ui, "Segoe UI", -apple-system, "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+      --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, "Liberation Mono", monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --bg: #0e141a; --surface: #151d25; --ink: #e5ecf3; --muted: #9aabbc; --line: #34424f;
+        --fabric: #45d0ba;  --fabric-bg: #10352f;
+        --azure: #7aa9f6;   --azure-bg: #14284a;
+        --foundry: #ae92f2; --foundry-bg: #281f47;
+        --local: #eaad52;   --local-bg: #37280f;
+        --m365: #ec8ab8;    --m365-bg: #3a1a2b;
+      }
+    }
+    svg { font-family: var(--font); color: var(--ink); }
+    .page { fill: var(--surface); }
+    .p-loc { fill: var(--local-bg); stroke: var(--local); stroke-width: 1.2; }
+    .p-fab { fill: var(--surface); stroke: var(--fabric); stroke-width: 1.4; }
+    .p-azr { fill: var(--surface); stroke: var(--azure); stroke-width: 1.4; }
+    .p-vnet { fill: var(--azure-bg); stroke: var(--azure); stroke-width: 1; stroke-dasharray: 5 4; }
+    .p-m365 { fill: var(--surface); stroke: var(--m365); stroke-width: 1.4; }
+    .n-fab { fill: var(--fabric-bg); stroke: var(--fabric); stroke-width: 1.3; }
+    .n-azr { fill: var(--surface); stroke: var(--azure); stroke-width: 1.3; }
+    .n-fnd { fill: var(--foundry-bg); stroke: var(--foundry); stroke-width: 1.4; }
+    .n-loc { fill: var(--surface); stroke: var(--local); stroke-width: 1.2; }
+    .n-m365 { fill: var(--m365-bg); stroke: var(--m365); stroke-width: 1.3; }
+    .title { font-size: 20px; font-weight: 700; fill: var(--ink); }
+    .subtitle { font-size: 12.5px; fill: var(--muted); }
+    .ph { font-size: 13px; font-weight: 700; }
+    .ph-fab { fill: var(--fabric); } .ph-azr { fill: var(--azure); } .ph-loc { fill: var(--local); } .ph-m365 { fill: var(--m365); } .ph-fnd { fill: var(--foundry); }
+    .t { font-size: 13.5px; font-weight: 600; fill: var(--ink); }
+    .s { font-size: 11.5px; fill: var(--muted); }
+    .m { font-size: 11px; font-family: var(--mono); fill: var(--muted); }
+    .lbl { font-size: 10.5px; fill: var(--muted); }
+    .a { fill: none; stroke: var(--muted); stroke-width: 1.5; marker-end: url(#ah); }
+    .ah { fill: var(--muted); }
+  </style>
+
+  <rect class="page" x="0" y="0" width="1240" height="900"/>
+  <text class="title" x="20" y="34">Telecom NOC copilot on Fabric Real-Time Intelligence and Microsoft Foundry</text>
+  <text class="subtitle" x="20" y="54">Planned architecture (nothing deployed yet). Region: Sweden Central, with UK South as the fallback. All data is synthetic.</text>
+
+  <!-- Local machine -->
+  <rect class="p-loc" x="20" y="70" width="200" height="810" rx="10"/>
+  <text class="ph ph-loc" x="34" y="94">Local machine</text>
+  <text class="s" x="34" y="112">operator's own az login</text>
+  <rect class="n-loc" x="34" y="128" width="172" height="118" rx="7"/>
+  <text class="t" x="46" y="150">Fabric setup</text>
+  <text class="m" x="46" y="170">01_jumpstart.py</text>
+  <text class="m" x="46" y="186">02_patch_emulator.py</text>
+  <text class="m" x="46" y="202">03_kql_schema.py</text>
+  <text class="m" x="46" y="218">04_ops_agent.py</text>
+  <text class="m" x="46" y="234">05_data_agent.py</text>
+  <rect class="n-loc" x="34" y="262" width="172" height="100" rx="7"/>
+  <text class="t" x="46" y="284">Seed and documents</text>
+  <text class="m" x="46" y="304">seed/towers.csv</text>
+  <text class="m" x="46" y="320">kb-docs/*.md (6)</text>
+  <text class="s" x="46" y="338">one source of tower IDs</text>
+  <text class="s" x="46" y="353">for data and documents</text>
+  <rect class="n-loc" x="34" y="560" width="172" height="134" rx="7"/>
+  <text class="t" x="46" y="582">Azure and Foundry</text>
+  <text class="m" x="46" y="602">azd provision (Bicep)</text>
+  <text class="m" x="46" y="618">upload_docs.py</text>
+  <text class="m" x="46" y="634">create_kb.py</text>
+  <text class="m" x="46" y="650">create_toolbox.py</text>
+  <text class="m" x="46" y="666">deploy_hosted_agent.py</text>
+  <text class="m" x="46" y="682">publish_teams.py</text>
+  <rect class="n-loc" x="34" y="710" width="172" height="76" rx="7"/>
+  <text class="t" x="46" y="732">Validate</text>
+  <text class="m" x="46" y="752">run_spike.py</text>
+  <text class="m" x="46" y="768">smoke_*.py, run_evals.py</text>
+  <text class="lbl" x="208" y="180">REST</text>
+  <text class="lbl" x="208" y="620">ARM</text>
+
+  <!-- Fabric -->
+  <rect class="p-fab" x="240" y="70" width="740" height="330" rx="10"/>
+  <text class="ph ph-fab" x="256" y="94">Microsoft Fabric · workspace telco-cdr-jumpstart · capacity telcof8 (F8)</text>
+
+  <rect class="n-fab" x="260" y="120" width="150" height="64" rx="7"/>
+  <text class="t" x="272" y="142">Emulator notebook</text>
+  <text class="s" x="272" y="159">+ tower_id, region</text>
+  <text class="s" x="272" y="174">+ spike mode</text>
+
+  <rect class="n-fab" x="440" y="120" width="160" height="64" rx="7"/>
+  <text class="t" x="452" y="142">Eventstream</text>
+  <text class="m" x="452" y="159">TelecomCallData-</text>
+  <text class="m" x="452" y="174">RecordsStream</text>
+
+  <rect class="n-fab" x="630" y="110" width="330" height="110" rx="7"/>
+  <text class="t" x="644" y="132">Eventhouse DemosEH</text>
+  <text class="m" x="644" y="150">KQL DB TelecomCallDataRecords</text>
+  <text class="m" x="644" y="170">cdr_raw (+ tower_id, region)</text>
+  <text class="m" x="644" y="186">towers · mv_drops_5m (5-min bins)</text>
+  <text class="m" x="644" y="202">drop_rate_by_region() · worst_towers()</text>
+
+  <text class="lbl" x="420" y="214">NL → KQL</text>
+  <text class="lbl" x="644" y="244" text-anchor="end">every 5 min</text>
+
+  <rect class="n-fab" x="260" y="260" width="230" height="70" rx="7"/>
+  <text class="t" x="272" y="282">Fabric Data Agent</text>
+  <text class="m" x="272" y="300">TalkToTelecomCdr</text>
+  <text class="s" x="272" y="318">published, user identity</text>
+
+  <rect class="n-fab" x="520" y="260" width="170" height="70" rx="7"/>
+  <text class="t" x="532" y="282">Operations Agent</text>
+  <text class="m" x="532" y="300">Telco Drop Monitor</text>
+  <text class="s" x="532" y="318">DCR &gt; 15%, ≥ 50 calls</text>
+
+  <rect class="n-fab" x="720" y="260" width="150" height="70" rx="7"/>
+  <text class="t" x="732" y="282">Activator</text>
+  <text class="s" x="732" y="300">custom action</text>
+  <text class="s" x="732" y="318">Email NOC</text>
+
+
+  <!-- Microsoft 365 -->
+  <rect class="p-m365" x="1000" y="70" width="220" height="810" rx="10"/>
+  <text class="ph ph-m365" x="1014" y="94">Microsoft 365 and people</text>
+  <rect class="n-m365" x="1020" y="112" width="180" height="70" rx="7"/>
+  <text class="t" x="1032" y="134">Operations Agent</text>
+  <text class="t" x="1032" y="151">Teams app</text>
+  <text class="s" x="1032" y="170">action approvals</text>
+  <rect class="n-m365" x="1020" y="260" width="180" height="70" rx="7"/>
+  <text class="t" x="1032" y="282">Power Automate</text>
+  <text class="s" x="1032" y="300">region, drop %,</text>
+  <text class="s" x="1032" y="316">tower count, window</text>
+  <rect class="n-m365" x="1020" y="360" width="180" height="70" rx="7"/>
+  <text class="t" x="1032" y="382">Outlook email</text>
+  <text class="s" x="1032" y="400">to the NOC, with an</text>
+  <text class="s" x="1032" y="416">"Investigate in Teams" link</text>
+  <text class="lbl" x="1116" y="458">deep link</text>
+  <rect class="n-m365" x="1020" y="480" width="180" height="84" rx="7"/>
+  <text class="t" x="1032" y="502">Microsoft Teams</text>
+  <text class="s" x="1032" y="520">NOC engineers chat</text>
+  <text class="s" x="1032" y="536">with Telco NOC Copilot</text>
+  <text class="s" x="1032" y="552">(their own identity)</text>
+
+  <!-- Azure -->
+  <rect class="p-azr" x="240" y="420" width="740" height="460" rx="10"/>
+  <text class="ph ph-azr" x="256" y="444">Azure · rg-telco-fabric-foundry</text>
+
+  <rect class="p-vnet" x="260" y="476" width="480" height="286" rx="8"/>
+  <text class="ph ph-fnd" x="274" y="752">Foundry project telco-agents (VNet-injected)</text>
+
+  <rect class="n-fnd" x="280" y="492" width="190" height="78" rx="7"/>
+  <text class="t" x="292" y="514">Knowledge agent</text>
+  <text class="m" x="292" y="532">telco-knowledge</text>
+  <text class="s" x="292" y="550">prompt agent, cites KB</text>
+  <text class="s" x="292" y="564">answers only from KB</text>
+
+  <rect class="n-fnd" x="500" y="492" width="220" height="78" rx="7"/>
+  <text class="t" x="512" y="514">Orchestrator (hosted)</text>
+  <text class="m" x="512" y="532">telco-orchestrator</text>
+  <text class="s" x="512" y="550">Agent Framework; routes</text>
+  <text class="s" x="512" y="564">data / knowledge / both</text>
+
+  <text class="lbl" x="711" y="413">read-only KQL tools</text>
+
+  <rect class="n-fnd" x="500" y="600" width="220" height="56" rx="7"/>
+  <text class="t" x="512" y="622">Toolbox (Data Agent)</text>
+  <text class="m" x="512" y="642">fabric-dataagent-obo</text>
+  <text class="lbl" x="492" y="413">user token (OBO)</text>
+
+  <rect class="n-fnd" x="280" y="600" width="190" height="56" rx="7"/>
+  <text class="t" x="292" y="622">Models</text>
+  <text class="m" x="292" y="642">gpt-4.1 · text-emb-3-large</text>
+
+  <text class="lbl" x="560" y="582">MCP</text>
+
+  <rect class="n-azr" x="280" y="668" width="440" height="66" rx="7"/>
+  <text class="t" x="292" y="688">Private endpoints in snet-pe</text>
+  <text class="s" x="292" y="706">Search · agent Storage · Cosmos · Key Vault · ACR</text>
+  <text class="s" x="292" y="722">ACI jumpbox in snet-container (only after lock-down)</text>
+
+  <rect class="n-azr" x="760" y="490" width="200" height="64" rx="7"/>
+  <text class="t" x="772" y="512">Azure Bot Service</text>
+  <text class="m" x="772" y="530">bot-telco-orchestrator</text>
+  <text class="s" x="772" y="546">Teams channel</text>
+
+  <rect class="n-azr" x="760" y="566" width="200" height="78" rx="7"/>
+  <text class="t" x="772" y="588">Foundry IQ KB</text>
+  <text class="m" x="772" y="606">telco-kb on AI Search</text>
+  <text class="s" x="772" y="622">semantic ranker,</text>
+  <text class="s" x="772" y="637">agentic retrieval</text>
+
+  <rect class="n-azr" x="760" y="666" width="200" height="62" rx="7"/>
+  <text class="t" x="772" y="688">Blob kb-docs</text>
+  <text class="s" x="772" y="706">6 synthetic documents,</text>
+  <text class="s" x="772" y="721">same files every deploy</text>
+
+  <rect class="n-azr" x="760" y="740" width="200" height="72" rx="7"/>
+  <text class="t" x="772" y="762">Platform</text>
+  <text class="s" x="772" y="780">Cosmos + Storage (agent state)</text>
+  <text class="s" x="772" y="796">Key Vault · ACR · App Insights</text>
+
+  <text class="s" x="256" y="786">Lock-down (last): Foundry, AI Search and KB storage public access off;</text>
+  <text class="s" x="256" y="802">Teams keeps working through the Bot Service route. Fabric private link is optional.</text>
+  <text class="s" x="256" y="830">Showcase question: "Drops spiked in Gauteng in the last hour. Which towers</text>
+  <text class="s" x="256" y="846">are affected, is there planned maintenance, does this breach any enterprise</text>
+  <text class="s" x="256" y="862">SLA, and what should the field team do?"</text>
+  <!-- Arrows (drawn last) -->
+  <path class="a" d="M206 187 H240"/>
+  <path class="a" d="M206 627 H240"/>
+  <path class="a" d="M410 152 H438"/>
+  <path class="a" d="M600 152 H628"/>
+  <path class="a" d="M630 200 H370 V258"/>
+  <path class="a" d="M650 220 V258"/>
+  <path class="a" d="M690 295 H718"/>
+  <path class="a" d="M870 295 H1018"/>
+  <path class="a" d="M1110 330 V358"/>
+  <path class="a" d="M1110 430 V478"/>
+  <path class="a" d="M1020 522 H962"/>
+  <path class="a" d="M500 531 H472"/>
+  <path class="a" d="M705 492 V222"/>
+  <path class="a" d="M610 570 V598"/>
+  <path class="a" d="M500 628 H486 V332"/>
+  <path class="a" d="M375 570 V585 H758"/>
+  <path class="a" d="M760 531 H722"/>
+  <path class="a" d="M860 644 V664"/>
+</svg>
