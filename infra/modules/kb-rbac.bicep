@@ -11,10 +11,10 @@ param operatorPrincipalId string
 
 var storageBlobDataReader = '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
 var storageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-var searchServiceContributor = '7ca78c08-252a-4471-8644-bab5ee668cb4'
+var searchServiceContributor = '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
 var searchIndexDataContributor = '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
 var cognitiveServicesOpenAIUser = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-var azureAIUser = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+var foundryUser = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
 var foundryProjectManager = 'eadc314b-1a2d-4efa-be10-5d325db5065e'
 
 resource search 'Microsoft.Search/searchServices@2024-06-01-preview' existing = {
@@ -82,10 +82,10 @@ resource operatorSearchData 'Microsoft.Authorization/roleAssignments@2022-04-01'
 }
 
 resource operatorFoundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(account.id, operatorPrincipalId, azureAIUser)
+  name: guid(account.id, operatorPrincipalId, foundryUser)
   scope: account
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', azureAIUser)
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', foundryUser)
     principalId: operatorPrincipalId
     principalType: 'User'
   }

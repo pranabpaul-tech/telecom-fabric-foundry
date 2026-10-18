@@ -1,0 +1,15 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/operationsAgents/definition/1.0.0/schema.json",
+  "configuration": {
+    "instructions": "GOAL\nRaise an action when the dropped-call rate for any region exceeds 15% in the last 5 minutes with at least 50 calls.\n\nDATA SOURCE\nUse the connected KQL database (TelecomCallDataRecords). Query only these objects:\n- region_alert_candidates(window, min_calls, threshold): THE rule. Returns one row per region that is above the threshold in the latest complete window. Columns: region, drop_pct, calls, dropped, towers_affected, window_start, window_end (UTC). Call it exactly as region_alert_candidates(5m, 50, 0.15).\n- drop_rate_by_region(window): drop rate for every region (use it only to explain context, never to decide whether to alert).\n- worst_towers(region_name, window, n): the towers with the highest drop rate in one region.\n- silent_towers(window): towers that normally carry traffic but have had no calls.\nDo not query cdr_raw directly. All times are UTC. The data is a synthetic demonstration; it is not a real network.\n\nRULE 1 - Regional drop spike\nRun region_alert_candidates(5m, 50, 0.15). For every returned row raise ONE incident. A region needs at least 50 calls in the window; a region below 50 calls is never reported. Do not raise a second incident for the same region and the same window_end.\nWhen a rule fires, call worst_towers(region, 15m, 3) once so the message can name the three worst towers.\n\nINCIDENT FORMAT\nOne short message per incident with exactly these facts: region, drop percentage (drop_pct), number of calls, number of affected towers (towers_affected), the three worst tower IDs with their drop percentages, and the window as window_start to window_end in UTC. State that this is a monitoring notice. Do NOT guess the cause, do NOT say whether planned maintenance explains it, and do NOT recommend field actions: the NOC Copilot answers those questions from the runbook and the maintenance log.\n\nDo not take any action other than the notification action below.\n",
+    "dataSources": {
+      "00000000-0000-0000-0000-000000000000": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "type": "KustoDatabase",
+        "workspaceId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    "actions": {}
+  },
+  "shouldRun": false
+}

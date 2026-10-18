@@ -1,0 +1,50 @@
+[
+  {
+    "question": "What is the dropped-call rate by region?",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nmv_drops_5m\n| where bin_start > newest - 1h\n| where isnotempty(region)\n| summarize calls = sum(calls), dropped = sum(dropped), towers = dcount(tower_id) by region\n| extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)\n| order by drop_pct desc"
+  },
+  {
+    "question": "Which regions are above the 15 percent drop threshold right now?",
+    "query": "region_alert_candidates(5m, 50, 0.15)"
+  },
+  {
+    "question": "Which towers in Gauteng have the highest drop rate in the last hour?",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nworst_towers('Gauteng', 1h, 5, 10, newest + 5m)"
+  },
+  {
+    "question": "How many calls were completed, failed and dropped in the last 30 minutes?",
+    "query": "let newest = toscalar(cdr_raw | summarize max(call_start_time));\ncdr_raw\n| where call_start_time > newest - 30m\n| summarize calls = count() by status\n| extend share_pct = round(100.0 * calls / toscalar(cdr_raw | where call_start_time > newest - 30m | count), 2)"
+  },
+  {
+    "question": "Show the drop rate for Gauteng in 5 minute bins over the last hour",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nmv_drops_5m\n| where bin_start > newest - 1h and region == 'Gauteng'\n| summarize calls = sum(calls), dropped = sum(dropped) by bin_start\n| extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)\n| order by bin_start asc"
+  },
+  {
+    "question": "What is the call quality trend for Gauteng in 5 minute bins?",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nmv_drops_5m\n| where bin_start > newest - 1h and region == 'Gauteng'\n| summarize calls = sum(calls), quality_sum = sum(quality_sum) by bin_start\n| extend avg_quality = round(todouble(quality_sum) / calls, 2)\n| order by bin_start asc"
+  },
+  {
+    "question": "Break down the calls by call type",
+    "query": "let newest = toscalar(cdr_raw | summarize max(call_start_time));\ncdr_raw\n| where call_start_time > newest - 1h\n| summarize calls = count(), dropped = countif(status == 'Dropped') by call_type\n| extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)\n| order by calls desc"
+  },
+  {
+    "question": "Compare 4G and 5G drop rates",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nmv_drops_5m\n| where bin_start > newest - 1h\n| lookup (towers | project tower_id, technology) on tower_id\n| summarize calls = sum(calls), dropped = sum(dropped) by technology\n| extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)"
+  },
+  {
+    "question": "Compare microwave and fibre backhaul drop rates in Gauteng",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nmv_drops_5m\n| where bin_start > newest - 1h and region == 'Gauteng'\n| lookup (towers | project tower_id, backhaul) on tower_id\n| summarize calls = sum(calls), dropped = sum(dropped), towers = dcount(tower_id) by backhaul\n| extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)"
+  },
+  {
+    "question": "Which towers have no traffic?",
+    "query": "silent_towers(10m)"
+  },
+  {
+    "question": "Compare the drop rate of Gauteng with the national drop rate",
+    "query": "let newest = toscalar(mv_drops_5m | summarize max(bin_start));\nlet w = mv_drops_5m | where bin_start > newest - 1h | where isnotempty(region);\nunion (w | where region == 'Gauteng' | summarize calls = sum(calls), dropped = sum(dropped) | extend scope = 'Gauteng'),\n      (w | summarize calls = sum(calls), dropped = sum(dropped) | extend scope = 'All regions')\n| extend drop_pct = round(100.0 * todouble(dropped) / calls, 2)\n| project scope, calls, dropped, drop_pct"
+  },
+  {
+    "question": "What is the total number of calls and the overall drop percentage?",
+    "query": "cdr_raw\n| summarize total_calls = count(), dropped_calls = countif(status == 'Dropped')\n| extend drop_pct = round(100.0 * todouble(dropped_calls) / total_calls, 2)"
+  }
+]
