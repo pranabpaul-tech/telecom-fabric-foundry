@@ -99,3 +99,26 @@ def test_freshness_reports_age_and_staleness():
     old = tools.freshness({"newest_bin_start": now - timedelta(hours=14)}, now)
     assert old["stale"] is True and old["data_age_minutes"] > 800
     assert tools.freshness(None, now)["has_data"] is False
+
+
+def test_kb_client_maps_passages_to_document_ids():
+    spec2 = importlib.util.spec_from_file_location("kb_client", ROOT / "src/telcoops/foundry/hosted_agent/kb_client.py")
+    kbc = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(kbc)
+    import json
+    response = {
+        "response": [{"content": [{"type": "text", "text": json.dumps([
+            {"ref_id": 0, "content": "Jacaranda Health Network | Platinum | 15 minutes"},
+            {"ref_id": 1, "content": "weekdays 09:00-15:00 SAST"}])}]}],
+        "references": [{"id": "0", "docName": "enterprise-sla-contracts.md"}, {"id": "1", "docName": "maintenance-and-incident-log.md"}],
+    }
+    out = kbc.format_retrieval(response)
+    assert [p["document_id"] for p in out["passages"]] == ["SLA-ENT-001", "MAINT-LOG-001"]
+    assert out["note"] is None
+    empty = kbc.format_retrieval({"response": [], "references": []})
+    assert empty["passage_count"] == 0 and "Not in the knowledge base" in empty["note"]
+    # unknown file names are kept visible, never silently relabelled
+    odd = kbc.format_retrieval({"response": [{"content": [{"text": json.dumps([{"ref_id": 5, "content": "x"}])}]}],
+                                "references": [{"id": "5", "docName": "other.md"}]})
+    assert odd["passages"][0]["document_id"] == "other.md"
+    assert set(kbc.DOC_IDS.values()) == {"RB-NOC-001", "SITE-INV-001", "MAINT-LOG-001", "KPI-DEF-001", "SLA-ENT-001", "QOS-REG-001"}

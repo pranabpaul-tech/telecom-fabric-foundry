@@ -25,7 +25,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from agent_framework import Agent, tool
-from agent_framework.azure import AzureAISearchContextProvider
 from agent_framework.foundry import FoundryChatClient
 from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.identity import DefaultAzureCredential
@@ -33,6 +32,7 @@ from azure.kusto.data import ClientRequestProperties, KustoClient, KustoConnecti
 from dotenv import load_dotenv
 from pydantic import Field
 
+import kb_client as kb  # Foundry IQ knowledge base retrieval (kb_client.py, same directory)
 import tools as tl  # deterministic logic (tools.py, same directory)
 
 load_dotenv()
@@ -162,8 +162,24 @@ def query_cdr(
         return f"QUERY FAILED: {exc}"
 
 
+@tool(approval_mode="never_require")
+def search_knowledge_base(
+    question: Annotated[str, Field(description="A self-contained question. Name tower IDs, customers, documents or procedures explicitly.")],
+) -> str:
+    """Search the telecom knowledge base (runbook, site inventory, maintenance log, KPI definitions, enterprise SLAs,
+    regulatory QoS targets) and return the matching passages, each with its document ID (for example SLA-ENT-001).
+    Call it more than once for different aspects of a question."""
+    try:
+        return json.dumps(kb.retrieve(os.environ["AZURE_SEARCH_ENDPOINT"], os.environ["AZURE_SEARCH_KNOWLEDGE_BASE_NAME"],
+                                      question, _credential), default=str)
+    except Exception as exc:  # noqa: BLE001 - surfaced to the model verbatim
+        return f"KNOWLEDGE SEARCH FAILED: {exc}"
+
+
 KNOWLEDGE_INSTRUCTIONS = """\
-You answer questions about the fictional telecom operator Imvula Telecom using ONLY the connected knowledge base:
+You answer questions about the fictional telecom operator Imvula Telecom using ONLY what search_knowledge_base returns.
+ALWAYS call search_knowledge_base before answering, and call it again for each separate aspect of the question (for
+example one call for maintenance, one for the SLA, one for the runbook). The knowledge base holds:
 the NOC dropped-call runbook (RB-NOC-001), tower and site inventory (SITE-INV-001), maintenance and incident log
 (MAINT-LOG-001), KPI definitions (KPI-DEF-001), enterprise SLAs (SLA-ENT-001) and regulatory QoS targets (QOS-REG-001).
 All of it is synthetic demo data.
@@ -236,16 +252,6 @@ async def main() -> None:
         credential=_credential,
     )
 
-    search_provider = AzureAISearchContextProvider(
-        source_id="telco_knowledge_base",
-        endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
-        credential=_credential,
-        mode="agentic",
-        knowledge_base_name=os.environ["AZURE_SEARCH_KNOWLEDGE_BASE_NAME"],
-        knowledge_base_output_mode="extractive_data",
-        retrieval_reasoning_effort="minimal",
-    )
-
     data_tools: list = [data_freshness, region_drop_rate, affected_towers, customer_sla_check, query_cdr]
     toolbox_name = os.environ.get("TOOLBOX_NAME")
     if toolbox_name:
@@ -253,32 +259,31 @@ async def main() -> None:
         toolbox_url = f"{os.environ['FOUNDRY_PROJECT_ENDPOINT'].rstrip('/')}/toolboxes/{toolbox_name}/mcp?api-version=v1"
         data_tools.append(FoundryToolbox(_credential, url=toolbox_url, name="fabric_dataagent"))
 
-    async with search_provider:
-        knowledge_agent = Agent(
-            client=client,
-            name="telco_knowledge",
-            description="Imvula Telecom knowledge base: runbook, site inventory, maintenance log, KPI definitions, enterprise SLAs, QoS targets.",
-            instructions=KNOWLEDGE_INSTRUCTIONS,
-            context_providers=[search_provider],
-            default_options={"store": False},
-        )
-        orchestrator = Agent(
-            client=client,
-            instructions=ORCHESTRATOR_INSTRUCTIONS,
-            tools=[
-                *data_tools,
-                knowledge_agent.as_tool(
-                    name="telco_knowledge",
-                    description=("Answer from the telecom knowledge base with citations: NOC runbook steps, enterprise SLA limits "
-                                 "and notification deadlines, tower and site details, planned maintenance and past incidents, "
-                                 "KPI definitions, regulatory QoS targets."),
-                    arg_description="A self-contained question; include tower IDs, customer names, the weekday and the UTC time range when they matter.",
-                ),
-            ],
-            default_options={"store": False},
-        )
-        server = ResponsesHostServer(orchestrator)
-        await server.run_async()
+    knowledge_agent = Agent(
+        client=client,
+        name="telco_knowledge",
+        description="Imvula Telecom knowledge base: runbook, site inventory, maintenance log, KPI definitions, enterprise SLAs, QoS targets.",
+        instructions=KNOWLEDGE_INSTRUCTIONS,
+        tools=[search_knowledge_base],
+        default_options={"store": False},
+    )
+    orchestrator = Agent(
+        client=client,
+        instructions=ORCHESTRATOR_INSTRUCTIONS,
+        tools=[
+            *data_tools,
+            knowledge_agent.as_tool(
+                name="telco_knowledge",
+                description=("Answer from the telecom knowledge base with citations: NOC runbook steps, enterprise SLA limits "
+                             "and notification deadlines, tower and site details, planned maintenance and past incidents, "
+                             "KPI definitions, regulatory QoS targets."),
+                arg_description="A self-contained question; include tower IDs, customer names, the weekday and the UTC time range when they matter.",
+            ),
+        ],
+        default_options={"store": False},
+    )
+    server = ResponsesHostServer(orchestrator)
+    await server.run_async()
 
 
 if __name__ == "__main__":

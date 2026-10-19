@@ -27,7 +27,7 @@ def main() -> None:
                                 state.output("wave1", "foundryProjectName"))
     agent_name = state.require("foundry_agent", "agentName")["agentName"]
 
-    with DefaultAzureCredential() as credential, AIProjectClient(endpoint=endpoint, credential=credential) as project:
+    with DefaultAzureCredential(process_timeout=90) as credential, AIProjectClient(endpoint=endpoint, credential=credential) as project:
         client = project.get_openai_client(agent_name=agent_name)
         for q in questions:
             print("=" * 100)
@@ -37,8 +37,12 @@ def main() -> None:
             for item in response.output:
                 kind = getattr(item, "type", "?")
                 if kind == "function_call":
-                    args = json.loads(item.arguments).get("kql", item.arguments)
-                    print("\n  [KQL]", " ".join(str(args).split())[:400])
+                    try:
+                        parsed = json.loads(item.arguments)
+                        args = parsed.get("kql", item.arguments) if isinstance(parsed, dict) else item.arguments
+                    except ValueError:  # arguments are not always one JSON document
+                        args = item.arguments
+                    print(f"\n  [tool {getattr(item, 'name', '?')}]", " ".join(str(args).split())[:400])
                 elif kind == "function_call_output":
                     print("  [RESULT]", str(item.output)[:300].replace("\n", " "))
                 elif kind not in ("message", "reasoning"):

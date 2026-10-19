@@ -175,7 +175,7 @@ def deploy(model_name: str) -> None:
     zip_path = _zip_source(SOURCE_DIR)
     logger.info("Packaged %s -> %s", SOURCE_DIR, zip_path)
 
-    with zip_path.open("rb") as code_stream, DefaultAzureCredential() as credential, \
+    with zip_path.open("rb") as code_stream, DefaultAzureCredential(process_timeout=90) as credential, \
             AIProjectClient(endpoint=endpoint, credential=credential) as project:
 
         created = project.agents.create_version_from_code(
@@ -207,6 +207,24 @@ def deploy(model_name: str) -> None:
         _finish_deploy(state, account_name, project_name, project, created, query_uri, database_name)
 
 
+def resume(version: str) -> None:
+    """Finish a deploy whose version already exists (the script died while polling, for example on a
+    credential hiccup): wait for it to become active, route traffic, record state, grant data access."""
+    from types import SimpleNamespace
+
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import DefaultAzureCredential
+
+    state = StateStore()
+    account_name = state.output("wave1", "foundryAccountName")
+    project_name = state.output("wave1", "foundryProjectName")
+    query_uri = state.output("eventhouse", "queryServiceUri")
+    database_name = state.output("eventhouse", "kqlDatabaseName")
+    with DefaultAzureCredential(process_timeout=90) as credential,             AIProjectClient(endpoint=project_endpoint(account_name, project_name), credential=credential) as project:
+        _finish_deploy(state, account_name, project_name, project, SimpleNamespace(version=version),
+                       query_uri, database_name)
+
+
 def deploy_from_image(image: str, model_name: str) -> None:
     """Fallback path — register a pre-built container image instead of
     letting the platform build one from source. See this module's docstring
@@ -224,7 +242,7 @@ def deploy_from_image(image: str, model_name: str) -> None:
 
     endpoint = project_endpoint(account_name, project_name)
 
-    with DefaultAzureCredential() as credential, AIProjectClient(endpoint=endpoint, credential=credential) as project:
+    with DefaultAzureCredential(process_timeout=90) as credential, AIProjectClient(endpoint=endpoint, credential=credential) as project:
         created = project.agents.create_version(
             agent_name=HOSTED_AGENT_NAME,
             description="Telco NOC Copilot - dropped-call investigation: live data, knowledge base, SLAs.",
@@ -315,7 +333,14 @@ def main() -> None:
     parser.add_argument("--skip-network-toggle", action="store_true",
                          help="Don't flip the Foundry account public before deploying — use only if you've "
                               "already made it public yourself (e.g. re-running this after a failed attempt).")
+    parser.add_argument("--resume-version", metavar="N",
+                         help="Do not create a version: finish the deploy of an existing version (wait for active, "
+                              "route traffic, record state, grants).")
     args = parser.parse_args()
+
+    if args.resume_version:
+        resume(args.resume_version)
+        return
 
     if not args.skip_network_toggle:
         from telcoops.common.foundry_network import set_foundry_public_access
