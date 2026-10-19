@@ -30,11 +30,11 @@ Emulator nb ─► Eventstream ─► Eventhouse DemosEH / KQL DB TelecomCallDat
 
 | Topic | Decision |
 |---|---|
-| Subscription | `bcc55c5e-9e12-4ddc-8645-fa2006032074` |
+| Subscription | `<subscription-id>` |
 | Region | `swedencentral` for everything (Fabric capacity, Foundry, Search, Storage). The Operations Agent is supported there; it is not in East US or South Central US. **`uksouth` is an equally good fallback** (see "Region assessment" below). |
 | Network | **Private** in the end state, like `pdm-fabric-foundry`, but **Foundry, AI Search and the KB storage account stay publicly reachable until every build step is done**. The lock-down is one of the last steps. Fabric workspace private link is the very last step, and optional. |
 | Teams | In scope. The orchestrator is published to Teams through Azure Bot Service. |
-| Repo | New repo `C:\Users\pranabp\source\repos\telecom-fabric-foundry` (git initialised, nothing committed, no remote yet). |
+| Repo | New repo a local clone of this repo (git initialised, nothing committed, no remote yet). |
 | Where Fabric items are built | **From the local machine, not the jumpbox.** This only works while the workspace is public, which is why Fabric private link comes last. |
 | Reference implementation | `C:\Users\pranabp\source\repos\pdm-fabric-foundry` (GitHub `pranabpaul-tech/pdm-fabric-foundry`). Copy its patterns and its fixes; section 9 lists them. |
 
@@ -109,7 +109,7 @@ Prefer keeping the Fabric capacity in the tenant's home geography (see 3.1). Re-
    - `az`, `azd` and Python 3.11+ for the repo; Python **3.10 to 3.13** in a separate `.venv-js` for `fabric-jumpstart`.
    - Bicep CLI.
    - Docker is not needed (ACR Tasks builds the image).
-   - Sign in with `az login` / `azd auth login` as the operator and run `az account set -s bcc55c5e-9e12-4ddc-8645-fa2006032074`.
+   - Sign in with `az login` / `azd auth login` as the operator and run `az account set -s <subscription-id>`.
 
 ## 4. Repository layout to create
 
@@ -213,10 +213,10 @@ Each step lists **Do**, then **Verify**, then **Gotchas**. Don't start a step un
 #### P0.3 Deploy Azure (Waves 0 and 1)
 - **Do:**
   ```powershell
-  az account set -s bcc55c5e-9e12-4ddc-8645-fa2006032074
+  az account set -s <subscription-id>
   az group create -n rg-telco-fabric-foundry -l swedencentral
   az deployment group create -g rg-telco-fabric-foundry -n wave0-byo-deployment -f infra/wave0-byo-resources.bicep
-  azd env new telco-dev ; azd env set AZURE_SUBSCRIPTION_ID bcc55c5e-9e12-4ddc-8645-fa2006032074 ; azd env set AZURE_LOCATION swedencentral
+  azd env new telco-dev ; azd env set AZURE_SUBSCRIPTION_ID <subscription-id> ; azd env set AZURE_LOCATION swedencentral
   azd provision          # about 20 minutes. If Graph is challenged, set FABRIC_ADMIN_UPN and OPERATOR_OBJECT_ID yourself
   ```
   Then run the vendored `createCapHost.sh` for the capability host, as in PdM. `scripts/capture_state.py` copies the azd outputs into `state.json['wave1']`.

@@ -20,7 +20,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TELCO_", env_file=".env", extra="ignore")
 
-    subscription_id: str = "bcc55c5e-9e12-4ddc-8645-fa2006032074"
+    subscription_id: str = ""  # set TELCO_SUBSCRIPTION_ID in .env
     resource_group: str = "rg-telco-fabric-foundry"
     location: str = "swedencentral"
 

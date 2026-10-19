@@ -1,7 +1,7 @@
 # Deployment record
 
 What was actually deployed from `docs/PLAN.md`, where it differs from the plan, and what is still manual.
-Subscription `bcc55c5e-9e12-4ddc-8645-fa2006032074`, resource group `rg-telco-fabric-foundry`, deployed 17-19 October 2026.
+Subscription `<subscription-id>`, resource group `rg-telco-fabric-foundry`, deployed 17-19 October 2026.
 
 ## Deployed
 

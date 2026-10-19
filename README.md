@@ -11,7 +11,7 @@ A telecom NOC copilot on **Microsoft Fabric Real-Time Intelligence** and **Micro
 
 ## Status
 
-**Deployed** to subscription `bcc55c5e-9e12-4ddc-8645-fa2006032074` (Sweden Central, Search in UK South). See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for what exists, the deviations from the plan and the manual steps still open, and [`docs/PLAN.md`](docs/PLAN.md) for the original plan.
+**Deployed** to subscription `<subscription-id>` (Sweden Central, Search in UK South). See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for what exists, the deviations from the plan and the manual steps still open, and [`docs/PLAN.md`](docs/PLAN.md) for the original plan.
 
 | Area | State |
 |---|---|
