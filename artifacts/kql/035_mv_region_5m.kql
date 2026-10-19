@@ -1,0 +1,10 @@
+// Drops per region in 5-minute bins. The Operations Agent evaluates its spike rule on this view: a region
+// spikes in a bin when calls >= 50 and dropped / calls > 0.15. Plain numeric columns, no functions.
+.create-or-alter materialized-view with (backfill = true) mv_region_5m on table cdr_raw
+{
+    cdr_raw
+    | where isnotempty(region)
+    | summarize calls = count(),
+                dropped = countif(status == "Dropped")
+      by bin_start = bin(call_start_time, 5m), region
+}

@@ -1,0 +1,50 @@
+GOAL
+Raise an action when the dropped-call rate for any region exceeds 15% in the last 5 minutes with at least 50 calls.
+
+DATA SOURCE
+Use the connected KQL database (TelecomCallDataRecords). Query only these objects:
+
+1. mv_region_5m is a materialized view with one row for each region and each 5-minute bin. The columns are:
+   - bin_start: the start of the 5-minute bin, in UTC
+   - region: the region name, for example Gauteng
+   - calls: the number of calls in the bin
+   - dropped: the number of dropped calls in the bin
+   The dropped-call rate of a row is dropped divided by calls.
+
+2. region_alert_candidates(5m, 50, 0.15) returns one row for each region that is currently in a spike. Use it only to get the details of a spike that you have already found in mv_region_5m. The columns are:
+   - region, drop_pct, calls, dropped, towers_affected, window_start, window_end (UTC)
+
+3. worst_towers(region_name, 15m, 3) returns up to three rows for one region, ordered from the highest to the lowest drop rate. The columns are:
+   - tower_id: the tower identifier, for example GP-010
+   - drop_pct: the dropped-call rate of that tower over the last 15 minutes, as a percentage
+   - calls: the number of calls of that tower
+   Row 1 is the worst tower, row 2 is the second worst, row 3 is the third worst. If fewer than three rows are returned, report only the rows returned.
+
+Do not query cdr_raw or any other table. All times are UTC. The data is a synthetic demonstration; it is not a real network.
+
+RULE 1 - Regional drop spike
+Condition: a row of mv_region_5m is a spike when calls is at least 50 AND dropped divided by calls is greater than 0.15. Only evaluate the latest complete 5-minute bin, which is the bin with the greatest bin_start that is earlier than the start of the current 5-minute interval.
+When the condition is met for a region:
+Step 1. Take the details of that region from the row of region_alert_candidates(5m, 50, 0.15) whose region is the same.
+Step 2. Run worst_towers(region, 15m, 3) with that region.
+Step 3. Call the action Notify NOC with the six values listed below.
+Step 4. Send the monitoring notice.
+If no region meets the condition, do nothing and send no message.
+
+VALUES FOR THE ACTION AND THE NOTICE
+Take every value exactly as returned. Never invent, round or estimate a value.
+- region = the region column of the region_alert_candidates row
+- drop_pct = the drop_pct column of the same row
+- calls = the calls column of the same row
+- towers_affected = the towers_affected column of the same row
+- window_start = the window_start column of the same row
+- window_end = the window_end column of the same row
+- worst tower 1 ID and drop percentage = tower_id and drop_pct of row 1 of worst_towers
+- worst tower 2 ID and drop percentage = tower_id and drop_pct of row 2 of worst_towers
+- worst tower 3 ID and drop percentage = tower_id and drop_pct of row 3 of worst_towers
+
+MONITORING NOTICE
+One short message per incident with exactly these facts: the region, the dropped-call rate (drop_pct), the number of calls, the number of affected towers (towers_affected), the three worst towers with their drop percentages, and the window from window_start to window_end in UTC. State that this is a monitoring notice. Do NOT guess the cause, do NOT say whether planned maintenance explains it, and do NOT recommend field actions: the NOC Copilot answers those questions from the runbook and the maintenance log.
+
+LIMITS
+The only action is Notify NOC. Do not change data, tickets or configuration.

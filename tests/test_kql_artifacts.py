@@ -33,7 +33,7 @@ def _all_statements():
 
 def test_files_are_ordered_and_every_statement_is_a_dot_command():
     assert [p.name for p in kql.kql_files()] == [
-        "010_cdr_raw.kql", "020_towers.kql", "030_mv_drops_5m.kql", "040_functions.kql"]
+        "010_cdr_raw.kql", "020_towers.kql", "030_mv_drops_5m.kql", "035_mv_region_5m.kql", "040_functions.kql"]
     for name, s in _all_statements():
         assert s.startswith("."), f"{name}: {s[:60]}"
 
@@ -41,7 +41,7 @@ def test_files_are_ordered_and_every_statement_is_a_dot_command():
 def test_expected_objects_are_created():
     text = "\n".join(s for _, s in _all_statements())
     for needle in [".create-merge table cdr_raw", "ingestion json mapping 'cdr_raw_mapping'",
-                   ".create-merge table towers", "materialized-view with (backfill = true) mv_drops_5m",
+                   ".create-merge table towers", "materialized-view with (backfill = true) mv_drops_5m", "mv_region_5m on table cdr_raw",
                    "drop_rate_by_region(", "worst_towers(", "region_alert_candidates(", "silent_towers("]:
         assert needle in text, needle
 
