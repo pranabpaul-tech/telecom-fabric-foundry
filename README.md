@@ -52,15 +52,15 @@ A telecom NOC copilot on **Microsoft Fabric Real-Time Intelligence** and **Micro
    | `window_start` | Window start, UTC |
    | `window_end` | Window end, UTC |
 
-4. Choose **Create flow**. Power Automate opens with the trigger already linked to the action.
+4. Choose **Copy** to copy the connection string, then **Open flow builder**.
 
 ### 4. Build the Power Automate flow
-1. **Trigger:** keep **When an Activator rule is triggered**. Check the six parameters appear as dynamic content. If not, save, return to the agent and refresh the action.
+1. **Trigger:** keep **When an Activator rule is triggered**. It shows an **Invalid parameters** error until you paste the connection string you copied into it. Without it, the flow is not linked to the action and no values arrive.
 2. **Add an action:** **Office 365 Outlook**, then **Send an email (V2)**. Sign in with the mailbox that will send the alert (use a shared mailbox in a real NOC).
-3. Fill in the email, choosing the fields from the dynamic content picker:
+3. Fill in the email. The six parameters do **not** appear in the dynamic content list. In each field choose **fx**, open the **Expression** tab, and enter `triggerBody()?['customProperties/NAME']` with the parameter name in place of `NAME` (case-sensitive): `region`, `drop_pct`, `calls`, `towers_affected`, `window_start`, `window_end` ([Microsoft Learn](https://learn.microsoft.com/en-us/fabric/real-time-intelligence/data-activator/activator-trigger-power-automate-flows)). If a real agent call still shows empty values, try `triggerOutputs()?['body/inputFields/NAME']`, which a Microsoft community post uses.
    - **To:** the NOC address (your own for a demo).
-   - **Subject:** `[NOC] Dropped-call alert: ` + region + ` at ` + drop_pct + `%`
-   - **Body:**
+   - **Subject:** `[NOC] Dropped-call alert: ` + the `region` expression + ` at ` + the `drop_pct` expression + `%`
+   - **Body** (each `<field>` is the matching expression):
      ```
      Region: <region>
      Dropped-call rate: <drop_pct>% over <calls> calls
