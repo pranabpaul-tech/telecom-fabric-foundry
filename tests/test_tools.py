@@ -122,3 +122,21 @@ def test_kb_client_maps_passages_to_document_ids():
                                 "references": [{"id": "5", "docName": "other.md"}]})
     assert odd["passages"][0]["document_id"] == "other.md"
     assert set(kbc.DOC_IDS.values()) == {"RB-NOC-001", "SITE-INV-001", "MAINT-LOG-001", "KPI-DEF-001", "SLA-ENT-001", "QOS-REG-001"}
+
+
+def test_spike_period_finds_when_drops_were_elevated_not_the_whole_window():
+    t0 = datetime(2026, 10, 19, 12, 35, tzinfo=timezone.utc)
+    # (calls, dropped) per 5-minute bin from 12:35: 6.7%, 6%, 10%, 40 calls (too few), 20%, exactly 15%, 30%
+    bins = [(300, 20), (300, 18), (300, 30), (40, 30), (300, 60), (300, 45), (300, 90)]
+    rows = [{"bin_start": t0 + timedelta(minutes=5 * i), "calls": c, "dropped": d} for i, (c, d) in enumerate(bins)]
+    out = tools.shape_spike_period("Gauteng", 35, rows)
+    assert [b["bin_start_utc"][11:16] for b in out["elevated_bins"]] == ["12:55", "13:05"]
+    assert out["elevated_from_utc"].startswith("2026-10-19T12:55") and out["elevated_until_utc"].startswith("2026-10-19T13:10")
+    none = tools.shape_spike_period("Gauteng", 15, [{"bin_start": t0, "calls": 300, "dropped": 45}])
+    assert none["elevated_bin_count"] == 0 and "note" in none  # exactly 15.0% is not above the threshold
+
+
+def test_spike_period_kql_is_anchored_and_read_only():
+    kql = tools.spike_period_kql("Gauteng", 60)
+    assert "toscalar(mv_drops_5m | summarize max(bin_start))" in kql and "ago(" not in kql
+    assert tools.reject_reason(kql) is None

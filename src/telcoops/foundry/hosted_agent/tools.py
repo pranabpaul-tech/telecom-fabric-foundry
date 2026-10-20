@@ -69,6 +69,16 @@ def region_rate_kql(region: str, minutes: int) -> str:
             "| extend window_start = end_bin - " + f"{minutes}m" + ", window_end = end_bin")
 
 
+def spike_period_kql(region: str, minutes: int) -> str:
+    """Per-5-minute-bin region rates in the window, so the code can find when drops were actually elevated."""
+    region = validate_region(region)
+    minutes = validate_window(minutes)
+    return (ANCHOR +
+            f"mv_drops_5m | where bin_start >= end_bin - {minutes}m and bin_start < end_bin and region == '{region}'\n"
+            "| summarize calls = sum(calls), dropped = sum(dropped) by bin_start\n"
+            "| order by bin_start asc")
+
+
 def affected_towers_kql(region: str, minutes: int, threshold_pct: float, min_calls: int) -> str:
     region = validate_region(region)
     minutes = validate_window(minutes)
@@ -134,6 +144,29 @@ def shape_region_rate(region: str, minutes: int, row: dict | None) -> dict:
         d = pct(dropped, calls)
         out.update(status="OK", drop_pct=d, setup_fail_pct=pct(failed, calls),
                    above_alert_threshold=bool(d is not None and d > 15.0))
+    return out
+
+
+def shape_spike_period(region: str, minutes: int, rows: list[dict]) -> dict:
+    """When the region's 5-minute drop rate was above the alert threshold (more than 15% with at least 50 calls).
+
+    Bins are contiguous 5-minute intervals [bin_start, bin_start + 5 min). The elevated period runs from the first
+    to the last elevated bin; `elevated_bins` lists each one so a gap is visible.
+    """
+    elevated = []
+    for r in rows:
+        calls, dropped = int(r.get("calls") or 0), int(r.get("dropped") or 0)
+        d = pct(dropped, calls)
+        if calls >= MIN_CALLS_REGION_5M and d is not None and d > 15.0:
+            start = _aware(r["bin_start"])
+            elevated.append({"bin_start_utc": start.isoformat(), "bin_end_utc": (start + timedelta(minutes=5)).isoformat(),
+                             "calls": calls, "drop_pct": d})
+    out = {"region": region, "window_minutes": minutes, "bins_in_window": len(rows), "elevated_bin_count": len(elevated),
+           "elevated_bins": elevated}
+    if elevated:
+        out.update(elevated_from_utc=elevated[0]["bin_start_utc"], elevated_until_utc=elevated[-1]["bin_end_utc"])
+    else:
+        out["note"] = "no 5-minute bin in the window was above 15% with at least 50 calls"
     return out
 
 

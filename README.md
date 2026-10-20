@@ -20,7 +20,7 @@ A telecom NOC copilot on **Microsoft Fabric Real-Time Intelligence** and **Micro
 | Operations Agent | Created (`Telco Drop Monitor`); the playbook generates from the final instructions. **Manual:** [portal steps](#build-the-operations-agent-portal-steps) for the action, Power Automate email, Teams app, Start |
 | Fabric Data Agent | Created and published (`TalkToTelecomCdr`) |
 | Foundry IQ | Knowledge base `telco-kb` over six documents (File knowledge source) |
-| Orchestrator | Hosted agent `telco-orchestrator` v2, verified end to end on the showcase question |
+| Orchestrator | Hosted agent `telco-orchestrator` v3 (adds `spike_period`, so maintenance is judged on when the drops were elevated), verified end to end on the showcase question |
 | Teams | Bot Service deployed, app published at Shared scope; **not yet tried by a person** |
 | Lock-down | Not applied: Foundry and Search are still public |
 

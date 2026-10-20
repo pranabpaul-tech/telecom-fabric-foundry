@@ -104,6 +104,29 @@ def region_drop_rate(
         return f"REGION_DROP_RATE FAILED: {exc}"
 
 
+def _with_period_weekdays(result: dict) -> dict:
+    for key in ("elevated_from_utc", "elevated_until_utc"):
+        if result.get(key):
+            result[key.replace("_utc", "_weekday")] = _weekday(result[key])
+    return result
+
+
+@tool(approval_mode="never_require")
+def spike_period(
+    region: Annotated[str, Field(description="A South African province, e.g. 'Gauteng'.")],
+    window_minutes: Annotated[int, Field(ge=5, le=1440, description="Look-back window ending at the newest 5-minute bin.")] = 60,
+) -> str:
+    """WHEN the region's drops were actually elevated (above 15% with at least 50 calls per 5-minute bin) inside the
+    window: first and last elevated bin in UTC with weekday, and every elevated bin. Use this period, not the whole
+    look-back window, to decide whether planned maintenance can explain a spike."""
+    try:
+        rows = _rows(tl.spike_period_kql(region, window_minutes))
+        return json.dumps(_with_period_weekdays(tl.shape_spike_period(tl.validate_region(region), window_minutes, rows)),
+                          default=str)
+    except Exception as exc:  # noqa: BLE001
+        return f"SPIKE_PERIOD FAILED: {exc}"
+
+
 @tool(approval_mode="never_require")
 def affected_towers(
     region: Annotated[str, Field(description="A South African province, e.g. 'Gauteng'.")],
@@ -202,7 +225,7 @@ synthetic demonstration data. You have these tools and must route each question 
 
 NUMBERS AND TRENDS (what is happening):
 - data_freshness: how old the newest call data is. Call it first for any 'now', 'latest', 'last hour' question.
-- region_drop_rate, affected_towers, customer_sla_check: deterministic figures computed in code from the live
+- region_drop_rate, spike_period, affected_towers, customer_sla_check: deterministic figures computed in code from the live
   call data. These are authoritative: quote their numbers, never recompute or re-judge them.
 - query_cdr: read-only KQL for follow-up detail the tools above do not give.
 - The Fabric Data Agent (a tool from the connected toolbox): a natural-language analyst over the same call data. Use it
@@ -217,14 +240,20 @@ PROCEDURES, SLAs, SITES, MAINTENANCE, DEFINITIONS (what it means, what to do):
 
 INCIDENT QUESTIONS (a spike, an outage, 'what should we do'): use BOTH, in this order:
 1. data_freshness, then region_drop_rate for the region and affected_towers (window 15 minutes, and 60 if the spike
-   may be older). Note the window in UTC WITH its weekday as returned.
-2. telco_knowledge: ask for planned maintenance covering the affected tower IDs, naming the weekday and UTC time range,
+   may be older), then spike_period for the same region to learn WHEN the drops were elevated. Note the times in UTC
+   WITH their weekday as returned.
+2. telco_knowledge: ask for planned maintenance covering the affected tower IDs, naming the weekday and the UTC time
+   range of the elevated period (elevated_from_utc to elevated_until_utc from spike_period, not the look-back window),
    and for the runbook procedure that fits the pattern. Also ask for the SLA limit and notification deadline of every
    enterprise customer the affected towers serve.
 3. customer_sla_check for each affected customer with the limit from the knowledge base, window 60.
 4. Decide maintenance for each tower yourself from what the knowledge base returned: a tower is explained by planned
-   work ONLY if it is listed AND the incident window falls inside the recurring window on a matching weekday AND the
-   impact is within the expected level. Towers that are not listed are NOT explained, even in the same region. If a
+   work ONLY if it is listed AND the ELEVATED PERIOD from spike_period falls inside the recurring window on a matching
+   weekday AND the impact is within the expected level. The look-back window does not count: if only part of the
+   elevated period is inside the window (for example the window ended at 13:00 UTC and the drops continued after it),
+   say so, and treat the part outside the window as NOT explained. If spike_period finds no elevated bin, say the
+   region was not above the alert threshold in that period. Towers that are not listed are NOT explained, even in the
+   same region. If a
    customer was given notice at least 72 hours ahead, say the SLA exclusion may apply, but still state the measured
    figure and the verdict without the exclusion.
 5. Answer with: a one-line verdict; which towers are affected (and which are explained by maintenance); SLA position per
@@ -252,7 +281,7 @@ async def main() -> None:
         credential=_credential,
     )
 
-    data_tools: list = [data_freshness, region_drop_rate, affected_towers, customer_sla_check, query_cdr]
+    data_tools: list = [data_freshness, region_drop_rate, spike_period, affected_towers, customer_sla_check, query_cdr]
     toolbox_name = os.environ.get("TOOLBOX_NAME")
     if toolbox_name:
         # Only FoundryToolbox forwards the caller's identity to the Fabric MCP proxy.

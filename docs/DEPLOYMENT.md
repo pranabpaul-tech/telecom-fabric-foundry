@@ -13,7 +13,7 @@ Subscription `<subscription-id>`, resource group `rg-telco-fabric-foundry`, depl
 | Fabric data | Emulator patched (tower_id, region, spike mode); `cdr_raw` + 12-column mapping; `towers` (40 rows); `mv_drops_5m`; `drop_rate_by_region`, `worst_towers`, `region_alert_candidates`, `silent_towers` | KQL database `TelecomCallDataRecords` |
 | Fabric agents | Operations Agent **`Telco Drop Monitor`** (created, not started); Data Agent **`TalkToTelecomCdr`** (created and published, 12 verified example queries) | `2a5e9baf-…`, `8cf487f8-…` |
 | Foundry IQ | File knowledge source `telco-docs-ks` + knowledge base `telco-kb` (6 documents) | on `srch-telco-77kjeqakj77i6` |
-| Foundry | Toolbox `telco-fabric-toolbox` (connection `fabric-dataagent-obo`, user token); hosted agent `telco-orchestrator` **version 2** | |
+| Foundry | Toolbox `telco-fabric-toolbox` (connection `fabric-dataagent-obo`, user token); hosted agent `telco-orchestrator` **version 3** | |
 | Teams | Bot Service `bot-telco-orchestrator`; published at Shared scope | https://teams.microsoft.com/l/app/a806c434-04b6-4cfc-94eb-08f26514f9eb |
 
 ## Verified
